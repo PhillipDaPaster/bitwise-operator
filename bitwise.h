@@ -1,4 +1,5 @@
 #pragma once
+#include <type_traits>
 
 // ===================================================
 //  bitwise wrapper 
@@ -6,60 +7,90 @@
 
 template<typename T = u32>
 class bit {
+    static_assert(std::is_integral_v<T>, "bit<T> requires an integral type");
+
 public:
     T value;
 
-    FORCEINLINE bit() noexcept : value(0) {}
-    FORCEINLINE bit(T v) noexcept : value(v) {}
+    // constructors
+    constexpr bit() noexcept : value(0) {}
+    constexpr bit(T v) noexcept : value(v) {}
 
-    FORCEINLINE bit& operator=(T v) noexcept {
+    constexpr bit& operator=(T v) noexcept {
         value = v;
         return *this;
     }
 
-    FORCEINLINE operator T() const noexcept { return value; }
-
-    // bitwise ops
-    FORCEINLINE bit operator|(const bit& rhs) const noexcept { return bit(value | rhs.value); }
-    FORCEINLINE bit operator&(const bit& rhs) const noexcept { return bit(value & rhs.value); }
-    FORCEINLINE bit operator^(const bit& rhs) const noexcept { return bit(value ^ rhs.value); }
-    FORCEINLINE bit operator~() const noexcept { return bit(~value); }
-
-    FORCEINLINE bit& operator|=(const bit& rhs) noexcept { value |= rhs.value; return *this; }
-    FORCEINLINE bit& operator&=(const bit& rhs) noexcept { value &= rhs.value; return *this; }
-    FORCEINLINE bit& operator^=(const bit& rhs) noexcept { value ^= rhs.value; return *this; }
-
-    // shifting
-    FORCEINLINE bit operator<<(int shift) const noexcept { return bit(value << shift); }
-    FORCEINLINE bit operator>>(int shift) const noexcept { return bit(value >> shift); }
-
-    FORCEINLINE bit& operator<<=(int shift) noexcept { value <<= shift; return *this; }
-    FORCEINLINE bit& operator>>=(int shift) noexcept { value >>= shift; return *this; }
-
-    FORCEINLINE bool test(int pos) const noexcept {
-        return (value >> pos) & (T)1;
+    explicit constexpr operator T() const noexcept {
+        return value;
     }
 
-    FORCEINLINE void set(int pos, bool state = true) noexcept {
-        T mask = (T)1 << pos;
+    // bitwise ops (bit vs bit)
+    constexpr bit operator|(const bit& rhs) const noexcept { return bit(value | rhs.value); }
+    constexpr bit operator&(const bit& rhs) const noexcept { return bit(value & rhs.value); }
+    constexpr bit operator^(const bit& rhs) const noexcept { return bit(value ^ rhs.value); }
+    constexpr bit operator~() const noexcept { return bit(static_cast<T>(~value)); }
+
+    constexpr bit& operator|=(const bit& rhs) noexcept { value |= rhs.value; return *this; }
+    constexpr bit& operator&=(const bit& rhs) noexcept { value &= rhs.value; return *this; }
+    constexpr bit& operator^=(const bit& rhs) noexcept { value ^= rhs.value; return *this; }
+
+    // bitwise ops (bit vs raw)
+    constexpr bit operator|(T rhs) const noexcept { return bit(value | rhs); }
+    constexpr bit operator&(T rhs) const noexcept { return bit(value & rhs); }
+    constexpr bit operator^(T rhs) const noexcept { return bit(value ^ rhs); }
+
+    constexpr bit& operator|=(T rhs) noexcept { value |= rhs; return *this; }
+    constexpr bit& operator&=(T rhs) noexcept { value &= rhs; return *this; }
+    constexpr bit& operator^=(T rhs) noexcept { value ^= rhs; return *this; }
+
+    // shifting
+    constexpr bit operator<<(int shift) const noexcept { return bit(value << shift); }
+    constexpr bit operator>>(int shift) const noexcept { return bit(value >> shift); }
+
+    constexpr bit& operator<<=(int shift) noexcept { value <<= shift; return *this; }
+    constexpr bit& operator>>=(int shift) noexcept { value >>= shift; return *this; }
+
+    // bit helpers (single bit)
+    constexpr bool test(int pos) const noexcept {
+        return (value >> pos) & static_cast<T>(1);
+    }
+
+    constexpr void set(int pos, bool state = true) noexcept {
+        const T mask = static_cast<T>(1) << pos;
         if (state)
             value |= mask;
         else
             value &= ~mask;
     }
 
-    FORCEINLINE void toggle(int pos) noexcept {
-        value ^= (T)1 << pos;
+    constexpr void toggle(int pos) noexcept {
+        value ^= (static_cast<T>(1) << pos);
     }
 
-    FORCEINLINE void clear() noexcept {
-        value = 0;
+    // bit helpers (mask-based)
+    constexpr bool has(bit mask) const noexcept {
+        return (value & mask.value) == mask.value;
     }
 
-    FORCEINLINE bool any() const noexcept { return value != 0; }
-    FORCEINLINE bool none() const noexcept { return value == 0; }
+    constexpr bool any() const noexcept {
+        return value != 0;
+    }
 
-    FORCEINLINE bool all(T mask) const noexcept {
+    constexpr bool none() const noexcept {
+        return value == 0;
+    }
+
+    constexpr bool all(T mask) const noexcept {
         return (value & mask) == mask;
+    }
+
+    constexpr bool all(bit mask) const noexcept {
+        return (value & mask.value) == mask.value;
+    }
+
+    // utilities
+    constexpr void clear() noexcept {
+        value = 0;
     }
 };
